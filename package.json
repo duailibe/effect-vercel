@@ -1,0 +1,67 @@
+{
+  "name": "effect-vercel",
+  "version": "0.1.0",
+  "description": "Effect integrations for Vercel: AI Gateway, OIDC",
+  "keywords": [
+    "ai-gateway",
+    "effect",
+    "effect-ai",
+    "oidc",
+    "vercel"
+  ],
+  "homepage": "https://github.com/duailibe/effect-vercel#readme",
+  "bugs": {
+    "url": "https://github.com/duailibe/effect-vercel/issues"
+  },
+  "license": "MIT",
+  "author": "Lucas Duailibe <lucasds@gmail.com>",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/duailibe/effect-vercel.git"
+  },
+  "files": [
+    "dist",
+    "src"
+  ],
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    "./ai-gateway": "./dist/ai-gateway.js",
+    "./oidc": "./dist/oidc.js",
+    "./package.json": "./package.json"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "tsdown",
+    "check": "tsc --noEmit",
+    "test": "vitest run",
+    "lint": "oxlint",
+    "fmt": "oxfmt",
+    "fmt:check": "oxfmt --check",
+    "prepublishOnly": "pnpm check && pnpm test && pnpm build"
+  },
+  "devDependencies": {
+    "@effect/ai-anthropic": "4.0.0-rc.112",
+    "@effect/language-service": "^0.87.2",
+    "@effect/vitest": "4.0.0-rc.112",
+    "@types/node": "^24",
+    "effect": "4.0.0-rc.112",
+    "oxfmt": "^0.68.0",
+    "oxlint": "^1.83.0",
+    "tsdown": "^0.23.0",
+    "typescript": "^5.9",
+    "vitest": "^5.0.1"
+  },
+  "peerDependencies": {
+    "@effect/ai-anthropic": "4.0.0-rc.112",
+    "effect": "4.0.0-rc.112"
+  },
+  "peerDependenciesMeta": {
+    "@effect/ai-anthropic": {
+      "optional": true
+    }
+  },
+  "packageManager": "pnpm@10.33.0"
+}
