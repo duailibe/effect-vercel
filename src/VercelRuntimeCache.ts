@@ -31,8 +31,12 @@ const sha256 = (key: string) => createHash("sha256").update(key).digest("hex")
 /**
  * A `BackingPersistence` over `cache`.
  *
- * Entries are keyed `storeId:key` and tagged with the store id, so `clear`
- * expires that tag. TTLs round up to whole seconds, the cache's resolution.
+ * Entries are keyed by the JSON pair `[storeId, key]`, so no two stores share
+ * a key. Each entry is tagged with a hash of the store id, since tags are
+ * joined with `,` and sent unescaped, and `clear` expires that tag. Entries
+ * are sent without a name, so keys don't reach Vercel's o11y or the request
+ * headers, where non-Latin-1 characters would make the write fail. TTLs round
+ * up to whole seconds, the cache's resolution.
  *
  * `getCache()` hashes keys with a 32-bit hash by default, which can collide.
  * Pass a cache made with a stronger `keyHashFunction`, as `layerBacking` does.
@@ -41,8 +45,8 @@ export const makeBacking = (cache: RuntimeCache): Persistence.BackingPersistence
   Persistence.BackingPersistence.of({
     make: (storeId) =>
       Effect.sync(() => {
-        const prefixed = (key: string) => `${storeId}:${key}`
-        const tags = [storeId]
+        const prefixed = (key: string) => JSON.stringify([storeId, key])
+        const tag = `effect-persistence:${sha256(storeId)}`
 
         const get = (key: string) =>
           Effect.tryPromise({
@@ -59,7 +63,8 @@ export const makeBacking = (cache: RuntimeCache): Persistence.BackingPersistence
           Effect.tryPromise({
             try: () =>
               cache.set(prefixed(key), value, {
-                tags,
+                name: "",
+                tags: [tag],
                 ...(ttl && { ttl: Math.max(1, Math.ceil(Duration.toSeconds(ttl))) }),
               }),
             catch: (cause) =>
@@ -82,7 +87,7 @@ export const makeBacking = (cache: RuntimeCache): Persistence.BackingPersistence
                 new Persistence.PersistenceError({ message: `Failed to remove key ${key}`, cause }),
             }),
           clear: Effect.tryPromise({
-            try: () => cache.expireTag(storeId),
+            try: () => cache.expireTag(tag),
             catch: (cause) =>
               new Persistence.PersistenceError({ message: `Failed to clear ${storeId}`, cause }),
           }),

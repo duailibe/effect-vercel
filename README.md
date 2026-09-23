@@ -141,10 +141,11 @@ const program = Effect.gen(function* () {
 
 - Off Vercel, `@vercel/functions` falls back to an in-memory cache, so the layer works in
   local dev and tests.
-- Entries are keyed `storeId:primaryKey`, hashed with SHA-256. `getCache`'s default hash is
-  32-bit and can collide, so `VercelRuntimeCache.makeBacking(cache)` expects a cache with a
-  stronger `keyHashFunction` if you build your own.
-- Each entry is tagged with its store id. `clear` expires that tag.
+- Entries are keyed by `[storeId, primaryKey]`, hashed with SHA-256. Only the hash reaches
+  Vercel. `getCache`'s default hash is 32-bit and can collide, so
+  `VercelRuntimeCache.makeBacking(cache)` expects a cache with a stronger `keyHashFunction` if
+  you build your own.
+- Each entry is tagged `effect-persistence:<sha256 of storeId>`. `clear` expires that tag.
 - TTLs round up to whole seconds.
 - The Runtime Cache swallows its own network errors and timeouts, which then read as misses
   and silently skipped writes.
