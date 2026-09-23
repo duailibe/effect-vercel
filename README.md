@@ -2,16 +2,18 @@
 
 [Effect](https://effect.website) (v4) integrations for Vercel. Each one is its own entry point:
 
-| Import                     | What                                                                  |
-| -------------------------- | --------------------------------------------------------------------- |
-| `effect-vercel/ai-gateway` | [Vercel AI Gateway](https://vercel.com/docs/ai-gateway) for Effect AI |
-| `effect-vercel/oidc`       | The OIDC token Vercel issues to a deployment                          |
+| Import                        | What                                                                            |
+| ----------------------------- | ------------------------------------------------------------------------------- |
+| `effect-vercel/ai-gateway`    | [Vercel AI Gateway](https://vercel.com/docs/ai-gateway) for Effect AI           |
+| `effect-vercel/oidc`          | The OIDC token Vercel issues to a deployment                                    |
+| `effect-vercel/runtime-cache` | [Runtime Cache](https://vercel.com/docs/runtime-cache) for Effect `Persistence` |
 
 ## Install
 
 ```sh
 pnpm add effect-vercel effect
 pnpm add @effect/ai-anthropic   # only for effect-vercel/ai-gateway
+pnpm add @vercel/functions      # only for effect-vercel/runtime-cache
 ```
 
 ## AI Gateway
@@ -111,6 +113,41 @@ const program = Effect.gen(function* () {
 
 Both read the token on every run, since it rotates per request. They do not refresh an
 expired local token; re-run `vercel env pull`.
+
+## Runtime Cache
+
+`VercelRuntimeCache.layer` provides Effect's `Persistence`, stored in the Vercel Runtime Cache.
+Use it with `PersistedCache` to share results across Function instances in a region.
+
+```ts
+import { VercelRuntimeCache } from "effect-vercel/runtime-cache"
+import { Effect, Schema } from "effect"
+import { Persistable, PersistedCache } from "effect/unstable/persistence"
+
+class GetUser extends Persistable.Class<{ payload: { id: number } }>()("GetUser", {
+  primaryKey: (req) => `GetUser:${req.id}`,
+  success: User,
+  error: Schema.Never,
+}) {}
+
+const program = Effect.gen(function* () {
+  const users = yield* PersistedCache.make(fetchUser, {
+    storeId: "users",
+    timeToLive: () => "1 hour",
+  })
+  return yield* users.get(new GetUser({ id: 1 }))
+}).pipe(Effect.scoped, Effect.provide(VercelRuntimeCache.layer))
+```
+
+- Off Vercel, `@vercel/functions` falls back to an in-memory cache, so the layer works in
+  local dev and tests.
+- Entries are keyed `storeId:primaryKey`, hashed with SHA-256. `getCache`'s default hash is
+  32-bit and can collide, so `VercelRuntimeCache.makeBacking(cache)` expects a cache with a
+  stronger `keyHashFunction` if you build your own.
+- Each entry is tagged with its store id. `clear` expires that tag.
+- TTLs round up to whole seconds.
+- The Runtime Cache swallows its own network errors and timeouts, which then read as misses
+  and silently skipped writes.
 
 ## Development
 
