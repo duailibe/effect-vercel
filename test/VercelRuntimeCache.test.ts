@@ -86,4 +86,22 @@ describe("VercelRuntimeCache", () => {
       ])
     }).pipe(Effect.scoped),
   )
+
+  it.effect("setMany writes only the last entry for a repeated key", () =>
+    Effect.gen(function* () {
+      const values: Array<unknown> = []
+      const cache: RuntimeCache = {
+        get: async () => null,
+        set: async (_key, value) => void values.push(value),
+        delete: async () => {},
+        expireTag: async () => {},
+      }
+      const store = yield* VercelRuntimeCache.makeBacking(cache).make("users")
+      yield* store.setMany([
+        ["a", { n: 1 }, undefined],
+        ["a", { n: 2 }, undefined],
+      ])
+      assert.deepStrictEqual(values, [{ n: 2 }])
+    }).pipe(Effect.scoped),
+  )
 })

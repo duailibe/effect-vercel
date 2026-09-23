@@ -75,11 +75,13 @@ export const makeBacking = (cache: RuntimeCache): Persistence.BackingPersistence
           get,
           getMany: (keys) => Effect.forEach(keys, get, { concurrency: "unbounded" }),
           set,
+          // Writes run concurrently, so keep only the last entry for each key.
           setMany: (entries) =>
-            Effect.forEach(entries, ([key, value, ttl]) => set(key, value, ttl), {
-              concurrency: "unbounded",
-              discard: true,
-            }),
+            Effect.forEach(
+              new Map(entries.map(([key, value, ttl]) => [key, [value, ttl] as const])),
+              ([key, [value, ttl]]) => set(key, value, ttl),
+              { concurrency: "unbounded", discard: true },
+            ),
           remove: (key) =>
             Effect.tryPromise({
               try: () => cache.delete(prefixed(key)),
