@@ -1,12 +1,13 @@
 {
   "name": "effect-vercel",
   "version": "0.1.0",
-  "description": "Effect integrations for Vercel: AI Gateway, OIDC",
+  "description": "Effect integrations for Vercel: AI Gateway, OIDC, Runtime Cache",
   "keywords": [
     "ai-gateway",
     "effect",
     "effect-ai",
     "oidc",
+    "runtime-cache",
     "vercel"
   ],
   "homepage": "https://github.com/duailibe/effect-vercel#readme",
@@ -28,6 +29,7 @@
   "exports": {
     "./ai-gateway": "./dist/ai-gateway.js",
     "./oidc": "./dist/oidc.js",
+    "./runtime-cache": "./dist/runtime-cache.js",
     "./package.json": "./package.json"
   },
   "publishConfig": {
@@ -47,6 +49,7 @@
     "@effect/language-service": "^0.87.2",
     "@effect/vitest": "4.0.0-rc.112",
     "@types/node": "^24",
+    "@vercel/functions": "^3.9.9",
     "effect": "4.0.0-rc.112",
     "oxfmt": "^0.68.0",
     "oxlint": "^1.83.0",
@@ -56,10 +59,14 @@
   },
   "peerDependencies": {
     "@effect/ai-anthropic": "4.0.0-rc.112",
+    "@vercel/functions": "^3.9.9",
     "effect": "4.0.0-rc.112"
   },
   "peerDependenciesMeta": {
     "@effect/ai-anthropic": {
+      "optional": true
+    },
+    "@vercel/functions": {
       "optional": true
     }
   },
