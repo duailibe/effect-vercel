@@ -2,7 +2,7 @@ import { createHash } from "node:crypto"
 import { assert, describe, it } from "@effect/vitest"
 import type { RuntimeCache } from "@vercel/functions"
 import { Duration, Effect, Exit, Schema } from "effect"
-import { Persistable, PersistedCache, Persistence } from "effect/unstable/persistence"
+import { Persistable, PersistedCache, Persistence } from "effect/persistence"
 import { VercelRuntimeCache } from "../src/runtime-cache.js"
 
 class User extends Schema.Class<User>("User")({ id: Schema.Number, name: Schema.String }) {}

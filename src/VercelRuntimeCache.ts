@@ -9,7 +9,7 @@
  * ```ts
  * import { VercelRuntimeCache } from "effect-vercel/runtime-cache"
  * import { Effect } from "effect"
- * import { PersistedCache } from "effect/unstable/persistence"
+ * import { PersistedCache } from "effect/persistence"
  *
  * const program = Effect.gen(function* () {
  *   const users = yield* PersistedCache.make(fetchUser, {
@@ -24,7 +24,7 @@
 import { createHash } from "node:crypto"
 import { getCache, type RuntimeCache } from "@vercel/functions"
 import { Duration, Effect, Layer } from "effect"
-import { Persistence } from "effect/unstable/persistence"
+import { Persistence } from "effect/persistence"
 
 const sha256 = (key: string) => createHash("sha256").update(key).digest("hex")
 

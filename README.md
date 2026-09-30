@@ -29,8 +29,8 @@ dialect and what the provider's schemas expect.
 import { AiGateway } from "effect-vercel/ai-gateway"
 import { AnthropicLanguageModel } from "@effect/ai-anthropic"
 import { Effect, Layer } from "effect"
-import { LanguageModel } from "effect/unstable/ai"
-import { FetchHttpClient } from "effect/unstable/http"
+import { LanguageModel } from "effect/ai"
+import { FetchHttpClient } from "effect/http"
 
 const Model = AnthropicLanguageModel.layer({ model: "google/gemini-2.5-flash" }).pipe(
   Layer.provide(AiGateway.layer),
@@ -122,7 +122,7 @@ Use it with `PersistedCache` to share results across Function instances in a reg
 ```ts
 import { VercelRuntimeCache } from "effect-vercel/runtime-cache"
 import { Effect, Schema } from "effect"
-import { Persistable, PersistedCache } from "effect/unstable/persistence"
+import { Persistable, PersistedCache } from "effect/persistence"
 
 class GetUser extends Persistable.Class<{ payload: { id: number } }>()("GetUser", {
   primaryKey: (req) => `GetUser:${req.id}`,
