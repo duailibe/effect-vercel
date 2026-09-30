@@ -1,8 +1,8 @@
 import { AnthropicLanguageModel } from "@effect/ai-anthropic"
 import { assert, describe, it } from "@effect/vitest"
 import { ConfigProvider, Effect, Layer } from "effect"
-import { LanguageModel } from "effect/unstable/ai"
-import { HttpBody, HttpClient, HttpClientRequest, HttpClientResponse } from "effect/unstable/http"
+import { LanguageModel } from "effect/ai"
+import { HttpBody, HttpClient, HttpClientRequest, HttpClientResponse } from "effect/http"
 import { AiGateway, AiGatewayCredentials } from "../src/ai-gateway.js"
 
 const gatewayMessage = {

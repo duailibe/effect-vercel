@@ -70,7 +70,7 @@ const hints: Record<Source, ReadonlyArray<string>> = {
  */
 type Lookup = Effect.Effect<Option.Option<Resolved>, AiGatewayCredentialsError>
 
-const apiKeyLookup: Lookup = Config.option(Config.redacted(API_KEY_ENV)).pipe(
+const apiKeyLookup: Lookup = Config.option(Config.Redacted(API_KEY_ENV)).pipe(
   Effect.map(Option.map((token) => ({ method: "api-key" as const, token }))),
   Effect.catchTag(
     "ConfigError",

@@ -57,7 +57,7 @@ const fromRequestContext = Effect.sync(() => {
   ).pipe(Option.map(Redacted.make))
 })
 
-const fromEnv = Config.option(Config.redacted(TOKEN_ENV)).pipe(
+const fromEnv = Config.option(Config.Redacted(TOKEN_ENV)).pipe(
   Effect.catchTag(
     "ConfigError",
     (cause) => new VercelOidcError({ message: `Failed to read ${TOKEN_ENV}.`, hints, cause }),

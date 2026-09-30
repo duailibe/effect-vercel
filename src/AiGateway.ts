@@ -18,7 +18,7 @@
  * import { AiGateway } from "effect-vercel/ai-gateway"
  * import { AnthropicLanguageModel } from "@effect/ai-anthropic"
  * import { Layer } from "effect"
- * import { FetchHttpClient } from "effect/unstable/http"
+ * import { FetchHttpClient } from "effect/http"
  *
  * const Model = AnthropicLanguageModel.layer({ model: "anthropic/claude-sonnet-4.5" }).pipe(
  *   Layer.provide(AiGateway.layer),
@@ -35,7 +35,7 @@ import {
   HttpClientError,
   HttpClientRequest,
   HttpClientResponse,
-} from "effect/unstable/http"
+} from "effect/http"
 import * as AiGatewayCredentials from "./AiGatewayCredentials.js"
 
 /** Base URL of the Vercel AI Gateway. */
