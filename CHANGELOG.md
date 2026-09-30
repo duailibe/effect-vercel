@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.2.0](https://github.com/duailibe/effect-vercel/compare/effect-vercel-v0.1.0...effect-vercel-v0.2.0) (2026-09-30)
+
+
+### ⚠ BREAKING CHANGES
+
+* requires effect and @effect/ai-anthropic 4.0.0-rc.118.
+
+### Features
+
+* update Effect to 4.0.0-rc.118 ([#3](https://github.com/duailibe/effect-vercel/issues/3)) ([047453b](https://github.com/duailibe/effect-vercel/commit/047453bc51ff89c025a35334b99d39362aeb8061))
+
 ## 0.1.0 (2026-09-23)
 
 
