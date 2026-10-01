@@ -1,6 +1,6 @@
 {
   "name": "effect-vercel",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Effect integrations for Vercel: AI Gateway, OIDC, Runtime Cache",
   "keywords": [
     "ai-gateway",
