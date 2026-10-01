@@ -45,12 +45,12 @@
     "prepublishOnly": "pnpm check && pnpm test && pnpm build"
   },
   "devDependencies": {
-    "@effect/ai-anthropic": "4.0.0-rc.118",
+    "@effect/ai-anthropic": "^4.0.0",
     "@effect/language-service": "^0.87.3",
-    "@effect/vitest": "4.0.0-rc.118",
+    "@effect/vitest": "^4.0.0",
     "@types/node": "^24",
     "@vercel/functions": "^3.9.9",
-    "effect": "4.0.0-rc.118",
+    "effect": "^4.0.0",
     "oxfmt": "^0.68.0",
     "oxlint": "^1.83.0",
     "tsdown": "^0.23.0",
@@ -58,9 +58,9 @@
     "vitest": "^5.0.1"
   },
   "peerDependencies": {
-    "@effect/ai-anthropic": "4.0.0-rc.118",
+    "@effect/ai-anthropic": "^4.0.0",
     "@vercel/functions": "^3.9.9",
-    "effect": "4.0.0-rc.118"
+    "effect": "^4.0.0"
   },
   "peerDependenciesMeta": {
     "@effect/ai-anthropic": {
