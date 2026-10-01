@@ -9,14 +9,14 @@ importers:
   .:
     devDependencies:
       '@effect/ai-anthropic':
-        specifier: 4.0.0-rc.118
-        version: 4.0.0-rc.118(effect@4.0.0-rc.118)
+        specifier: ^4.0.0
+        version: 4.0.0(effect@4.0.0)
       '@effect/language-service':
         specifier: ^0.87.3
         version: 0.87.3
       '@effect/vitest':
-        specifier: 4.0.0-rc.118
-        version: 4.0.0-rc.118(effect@4.0.0-rc.118)(vitest@5.0.1(@types/node@24.13.5)(vite@8.3.0(@types/node@24.13.5)))
+        specifier: ^4.0.0
+        version: 4.0.0(effect@4.0.0)(vitest@5.0.1(@types/node@24.13.5)(vite@8.3.0(@types/node@24.13.5)))
       '@types/node':
         specifier: ^24
         version: 24.13.5
@@ -24,8 +24,8 @@ importers:
         specifier: ^3.9.9
         version: 3.9.9
       effect:
-        specifier: 4.0.0-rc.118
-        version: 4.0.0-rc.118
+        specifier: ^4.0.0
+        version: 4.0.0
       oxfmt:
         specifier: ^0.68.0
         version: 0.68.0
@@ -44,19 +44,19 @@ importers:
 
 packages:
 
-  '@effect/ai-anthropic@4.0.0-rc.118':
-    resolution: {integrity: sha512-75a5I0nU/CnKXBstDKCtMVWazzGnmxETRtO1EXXtFJfYRGIp2MjJeB5bIfBReqrT6aXA3LE+D4S1K/9bqfOTHg==}
+  '@effect/ai-anthropic@4.0.0':
+    resolution: {integrity: sha512-/xZYmvRE9yDLKiz1pOIx0CVaB+o0zdJd6sTG9KQbFSkM+Ule0U/6yeN+Q6KD9I7Z73t3WxhK9Xmg1eqU6+IVmQ==}
     peerDependencies:
-      effect: ^4.0.0-rc.118
+      effect: ^4.0.0
 
   '@effect/language-service@0.87.3':
     resolution: {integrity: sha512-g1OmRBZF5chbW9QMNoirPo5Bb4zzU2HfP88tR7/VSZEUxHJ1/qVb8AQ0kUh2ggctLH1I715yCwP4gkw56PTjpQ==}
     hasBin: true
 
-  '@effect/vitest@4.0.0-rc.118':
-    resolution: {integrity: sha512-O0CPgtFVhkB+pyFtjP4up2XF4uVWsPgUmlv4hMjq8ARLOPKYix+uu3AUFIUKRHjzzQpx+JPce6KPhD6Flkrfag==}
+  '@effect/vitest@4.0.0':
+    resolution: {integrity: sha512-kGElCPFGtP+CgMCwV/HjJWqtE3zYo6I1+8MSA54l+EI24lPU9p2Efa+TBp1jfkg9j711KKzEqgSAy3VzTsb76Q==}
     peerDependencies:
-      effect: ^4.0.0-rc.118
+      effect: ^4.0.0
       vitest: '>=5.0.0 <6.0.0'
 
   '@jridgewell/resolve-uri@3.1.2':
@@ -634,8 +634,8 @@ packages:
       oxc-resolver:
         optional: true
 
-  effect@4.0.0-rc.118:
-    resolution: {integrity: sha512-hxhpCd+swzrtu9lnyPpEFre2ODQzJ9qxgyL1oHIEY8NKnW4PxTbM1XzplMZXiAsLD62HO+KJc41Nqxr9T791ZQ==}
+  effect@4.0.0:
+    resolution: {integrity: sha512-ooc1TG5t+FfzgYnFz2ff6BBKyZ7EwBRVXC7c4RhQUAD6/TZ2gTXXMeb4WX7a19ozQo4J73/QW+S00YAIresoMQ==}
 
   empathic@2.0.1:
     resolution: {integrity: sha512-YGRs8knHhKHVShLkFET/rWAU8kmHbOV5LwN938RHI0pljAJ1Gf6SzXsSmRaEzcXTtOOmVqJ5+WtQPL5uigY50Q==}
@@ -1098,15 +1098,15 @@ packages:
 
 snapshots:
 
-  '@effect/ai-anthropic@4.0.0-rc.118(effect@4.0.0-rc.118)':
+  '@effect/ai-anthropic@4.0.0(effect@4.0.0)':
     dependencies:
-      effect: 4.0.0-rc.118
+      effect: 4.0.0
 
   '@effect/language-service@0.87.3': {}
 
-  '@effect/vitest@4.0.0-rc.118(effect@4.0.0-rc.118)(vitest@5.0.1(@types/node@24.13.5)(vite@8.3.0(@types/node@24.13.5)))':
+  '@effect/vitest@4.0.0(effect@4.0.0)(vitest@5.0.1(@types/node@24.13.5)(vite@8.3.0(@types/node@24.13.5)))':
     dependencies:
-      effect: 4.0.0-rc.118
+      effect: 4.0.0
       vitest: 5.0.1(@types/node@24.13.5)(vite@8.3.0(@types/node@24.13.5))
 
   '@jridgewell/resolve-uri@3.1.2': {}
@@ -1420,7 +1420,7 @@ snapshots:
 
   dts-resolver@3.0.0: {}
 
-  effect@4.0.0-rc.118: {}
+  effect@4.0.0: {}
 
   empathic@2.0.1: {}
 
