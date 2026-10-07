@@ -15,7 +15,7 @@
  *
  * @example
  * ```ts
- * import { AiGateway } from "effect-vercel/ai-gateway"
+ * import * as AiGateway from "effect-vercel/AiGateway"
  * import { AnthropicLanguageModel } from "@effect/ai-anthropic"
  * import { Layer } from "effect"
  * import { FetchHttpClient } from "effect/http"

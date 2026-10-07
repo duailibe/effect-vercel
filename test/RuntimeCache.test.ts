@@ -1,9 +1,9 @@
 import { createHash } from "node:crypto"
 import { assert, describe, it } from "@effect/vitest"
-import type { RuntimeCache } from "@vercel/functions"
+import type { RuntimeCache as VercelCache } from "@vercel/functions"
 import { Duration, Effect, Exit, Schema } from "effect"
 import { Persistable, PersistedCache, Persistence } from "effect/persistence"
-import { VercelRuntimeCache } from "../src/runtime-cache.js"
+import * as RuntimeCache from "../src/RuntimeCache.js"
 
 class User extends Schema.Class<User>("User")({ id: Schema.Number, name: Schema.String }) {}
 
@@ -13,7 +13,7 @@ class GetUser extends Persistable.Class<{ payload: { id: number } }>()("GetUser"
   error: Schema.String,
 }) {}
 
-describe("VercelRuntimeCache", () => {
+describe("RuntimeCache", () => {
   // Off Vercel, `getCache` falls back to its in-memory cache.
   it.effect("shares results across PersistedCache instances", () =>
     Effect.gen(function* () {
@@ -37,7 +37,7 @@ describe("VercelRuntimeCache", () => {
         new User({ id: 1, name: "Ada" }),
       )
       assert.strictEqual(lookups, 1)
-    }).pipe(Effect.scoped, Effect.provide(VercelRuntimeCache.layer)),
+    }).pipe(Effect.scoped, Effect.provide(RuntimeCache.layer)),
   )
 
   it.effect("stores failures and clears by store id", () =>
@@ -54,7 +54,7 @@ describe("VercelRuntimeCache", () => {
       yield* store.clear
       assert.isUndefined(yield* store.get(req))
       assert.isDefined(yield* other.get(req))
-    }).pipe(Effect.scoped, Effect.provide(VercelRuntimeCache.layer)),
+    }).pipe(Effect.scoped, Effect.provide(RuntimeCache.layer)),
   )
 
   it.effect("keeps stores apart when ids and keys contain the separator", () =>
@@ -64,19 +64,19 @@ describe("VercelRuntimeCache", () => {
       const ab = yield* backing.make("a:b")
       yield* a.set("b:c", { from: "a" }, undefined)
       assert.isUndefined(yield* ab.get("c"))
-    }).pipe(Effect.scoped, Effect.provide(VercelRuntimeCache.layerBacking)),
+    }).pipe(Effect.scoped, Effect.provide(RuntimeCache.layerBacking)),
   )
 
   it.effect("sends whole-second TTLs, a hashed store tag, and no name", () =>
     Effect.gen(function* () {
       const sets: Array<{ key: string; name?: string; ttl?: number; tags?: Array<string> }> = []
-      const cache: RuntimeCache = {
+      const cache: VercelCache = {
         get: async () => null,
         set: async (key, _value, options) => void sets.push({ key, ...options }),
         delete: async () => {},
         expireTag: async () => {},
       }
-      const store = yield* VercelRuntimeCache.makeBacking(cache).make("users")
+      const store = yield* RuntimeCache.makeBacking(cache).make("users")
       yield* store.set("a", {}, Duration.millis(1500))
       yield* store.set("b", {}, undefined)
       const tags = [`effect-persistence:${createHash("sha256").update("users").digest("hex")}`]
@@ -90,13 +90,13 @@ describe("VercelRuntimeCache", () => {
   it.effect("setMany writes only the last entry for a repeated key", () =>
     Effect.gen(function* () {
       const values: Array<unknown> = []
-      const cache: RuntimeCache = {
+      const cache: VercelCache = {
         get: async () => null,
         set: async (_key, value) => void values.push(value),
         delete: async () => {},
         expireTag: async () => {},
       }
-      const store = yield* VercelRuntimeCache.makeBacking(cache).make("users")
+      const store = yield* RuntimeCache.makeBacking(cache).make("users")
       yield* store.setMany([
         ["a", { n: 1 }, undefined],
         ["a", { n: 2 }, undefined],

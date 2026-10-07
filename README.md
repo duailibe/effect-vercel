@@ -1,19 +1,25 @@
 # effect-vercel
 
-[Effect](https://effect.website) (v4) integrations for Vercel. Each one is its own entry point:
+[Effect](https://effect.website) (v4) integrations for Vercel. Each module is its own entry
+point, imported as a namespace like Effect's own modules:
 
-| Import                        | What                                                                            |
-| ----------------------------- | ------------------------------------------------------------------------------- |
-| `effect-vercel/ai-gateway`    | [Vercel AI Gateway](https://vercel.com/docs/ai-gateway) for Effect AI           |
-| `effect-vercel/oidc`          | The OIDC token Vercel issues to a deployment                                    |
-| `effect-vercel/runtime-cache` | [Runtime Cache](https://vercel.com/docs/runtime-cache) for Effect `Persistence` |
+```ts
+import * as AiGateway from "effect-vercel/AiGateway"
+```
+
+| Module                               | What                                                                            |
+| ------------------------------------ | ------------------------------------------------------------------------------- |
+| `effect-vercel/AiGateway`            | [Vercel AI Gateway](https://vercel.com/docs/ai-gateway) for Effect AI           |
+| `effect-vercel/AiGatewayCredentials` | How AI Gateway requests authenticate                                            |
+| `effect-vercel/Oidc`                 | The OIDC token Vercel issues to a deployment                                    |
+| `effect-vercel/RuntimeCache`         | [Runtime Cache](https://vercel.com/docs/runtime-cache) for Effect `Persistence` |
 
 ## Install
 
 ```sh
 pnpm add effect-vercel effect
-pnpm add @effect/ai-anthropic   # only for effect-vercel/ai-gateway
-pnpm add @vercel/functions      # only for effect-vercel/runtime-cache
+pnpm add @effect/ai-anthropic   # only for effect-vercel/AiGateway
+pnpm add @vercel/functions      # only for effect-vercel/RuntimeCache
 ```
 
 ## AI Gateway
@@ -26,7 +32,7 @@ dialect and what the provider's schemas expect.
 ### Usage
 
 ```ts
-import { AiGateway } from "effect-vercel/ai-gateway"
+import * as AiGateway from "effect-vercel/AiGateway"
 import { AnthropicLanguageModel } from "@effect/ai-anthropic"
 import { Effect, Layer } from "effect"
 import { LanguageModel } from "effect/ai"
@@ -56,6 +62,8 @@ To pick the source yourself, use `AiGateway.layerWithoutCredentials` and provide
 `AiGatewayCredentials` layer:
 
 ```ts
+import * as AiGatewayCredentials from "effect-vercel/AiGatewayCredentials"
+
 AnthropicLanguageModel.layer({ model: "google/gemini-2.5-flash" }).pipe(
   Layer.provide(AiGateway.layerWithoutCredentials),
   Layer.provide([AiGatewayCredentials.layerFromApiKey(key), FetchHttpClient.layer]),
@@ -64,9 +72,9 @@ AnthropicLanguageModel.layer({ model: "google/gemini-2.5-flash" }).pipe(
 
 | Layer                                       | Source                                                    |
 | ------------------------------------------- | --------------------------------------------------------- |
-| `AiGatewayCredentials.layer`                | The default: `layerFromEnv`, then `layerFromVercelOidc`.  |
+| `AiGatewayCredentials.layer`                | The default: `layerFromEnv`, then `layerFromOidc`.        |
 | `AiGatewayCredentials.layerFromEnv`         | `AI_GATEWAY_API_KEY`. Local dev, CI, anywhere off Vercel. |
-| `AiGatewayCredentials.layerFromVercelOidc`  | The Vercel OIDC token (see [OIDC](#oidc)).                |
+| `AiGatewayCredentials.layerFromOidc`        | The Vercel OIDC token (see [OIDC](#oidc)).                |
 | `AiGatewayCredentials.layerFromApiKey(key)` | A fixed key. Tests, custom wiring.                        |
 
 The credential is resolved on every request, so a rotating token is always current.
@@ -96,31 +104,29 @@ Vercel issues each deployment an OIDC token. Use it for the AI Gateway, or excha
 cloud credentials (AWS `AssumeRoleWithWebIdentity`, GCP workload identity federation).
 
 ```ts
-import { VercelOidc } from "effect-vercel/oidc"
+import * as Oidc from "effect-vercel/Oidc"
 import { Effect, Redacted } from "effect"
 
 const program = Effect.gen(function* () {
-  const token = yield* VercelOidc.token
+  const token = yield* Oidc.ambientToken
   // Redacted.value(token) is the web identity token
 })
 ```
 
-- `VercelOidc.token` reads the `x-vercel-oidc-token` header of the current request
-  (Functions), else `VERCEL_OIDC_TOKEN` (builds, `vercel env pull`). It fails with a
-  `VercelOidcError` when neither is set.
-- `VercelOidc.find` is the same but returns `Option.none()` instead of failing, for fallback
-  chains.
+`Oidc.ambientToken` reads the `x-vercel-oidc-token` header of the current request
+(Functions), else `VERCEL_OIDC_TOKEN` (builds, `vercel env pull`). Empty values count as
+unset. It fails with an `OidcError` when neither is set.
 
-Both read the token on every run, since it rotates per request. They do not refresh an
+It reads the token on every run, since it rotates per request. It does not refresh an
 expired local token; re-run `vercel env pull`.
 
 ## Runtime Cache
 
-`VercelRuntimeCache.layer` provides Effect's `Persistence`, stored in the Vercel Runtime Cache.
+`RuntimeCache.layer` provides Effect's `Persistence`, stored in the Vercel Runtime Cache.
 Use it with `PersistedCache` to share results across Function instances in a region.
 
 ```ts
-import { VercelRuntimeCache } from "effect-vercel/runtime-cache"
+import * as RuntimeCache from "effect-vercel/RuntimeCache"
 import { Effect, Schema } from "effect"
 import { Persistable, PersistedCache } from "effect/persistence"
 
@@ -136,14 +142,14 @@ const program = Effect.gen(function* () {
     timeToLive: () => "1 hour",
   })
   return yield* users.get(new GetUser({ id: 1 }))
-}).pipe(Effect.scoped, Effect.provide(VercelRuntimeCache.layer))
+}).pipe(Effect.scoped, Effect.provide(RuntimeCache.layer))
 ```
 
 - Off Vercel, `@vercel/functions` falls back to an in-memory cache, so the layer works in
   local dev and tests.
 - Entries are keyed by `[storeId, primaryKey]`, hashed with SHA-256. Only the hash reaches
   Vercel. `getCache`'s default hash is 32-bit and can collide, so
-  `VercelRuntimeCache.makeBacking(cache)` expects a cache with a stronger `keyHashFunction` if
+  `RuntimeCache.makeBacking(cache)` expects a cache with a stronger `keyHashFunction` if
   you build your own.
 - Each entry is tagged `effect-persistence:<sha256 of storeId>`. `clear` expires that tag.
 - TTLs round up to whole seconds.
