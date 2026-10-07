@@ -1,6 +1,6 @@
 import { assert, describe, it } from "@effect/vitest"
 import { ConfigProvider, Effect, Layer, Redacted } from "effect"
-import { AiGatewayCredentials } from "../src/ai-gateway.js"
+import * as AiGatewayCredentials from "../src/AiGatewayCredentials.js"
 
 const withEnv = (env: Record<string, string | undefined>) =>
   Effect.provideService(ConfigProvider.ConfigProvider, ConfigProvider.fromEnvRecord(env))
@@ -45,10 +45,10 @@ describe("AiGatewayCredentials", () => {
     )
   })
 
-  describe("layerFromVercelOidc", () => {
+  describe("layerFromOidc", () => {
     it.effect("falls back to VERCEL_OIDC_TOKEN", () =>
       Effect.gen(function* () {
-        const resolved = yield* resolve(AiGatewayCredentials.layerFromVercelOidc).pipe(
+        const resolved = yield* resolve(AiGatewayCredentials.layerFromOidc).pipe(
           withEnv({ VERCEL_OIDC_TOKEN: "from-env" }),
         )
         assert.strictEqual(resolved.method, "oidc")
@@ -58,11 +58,11 @@ describe("AiGatewayCredentials", () => {
 
     it.effect("ignores AI_GATEWAY_API_KEY", () =>
       Effect.gen(function* () {
-        const error = yield* resolve(AiGatewayCredentials.layerFromVercelOidc).pipe(
+        const error = yield* resolve(AiGatewayCredentials.layerFromOidc).pipe(
           withEnv({ AI_GATEWAY_API_KEY: "key" }),
           Effect.flip,
         )
-        assert.strictEqual(error.source, "vercel-oidc")
+        assert.strictEqual(error.source, "oidc")
       }),
     )
   })
@@ -91,6 +91,19 @@ describe("AiGatewayCredentials", () => {
         const error = yield* resolve(AiGatewayCredentials.layer).pipe(withEnv({}), Effect.flip)
         assert.strictEqual(error.source, "default")
         assert.isAbove(error.hints.length, 0)
+      }),
+    )
+
+    it.effect("does not fall back when AI_GATEWAY_API_KEY can't be read", () =>
+      Effect.gen(function* () {
+        const failing = ConfigProvider.make(() =>
+          Effect.fail(new ConfigProvider.SourceError({ message: "connection refused" })),
+        )
+        const error = yield* resolve(AiGatewayCredentials.layer).pipe(
+          Effect.provideService(ConfigProvider.ConfigProvider, failing),
+          Effect.flip,
+        )
+        assert.strictEqual(error.source, "env")
       }),
     )
 

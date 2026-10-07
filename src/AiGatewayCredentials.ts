@@ -8,23 +8,23 @@
  *
  * @example
  * ```ts
- * import { AiGatewayCredentials } from "effect-vercel/ai-gateway"
+ * import * as AiGatewayCredentials from "effect-vercel/AiGatewayCredentials"
  *
- * AiGatewayCredentials.layer           // AI_GATEWAY_API_KEY, else the Vercel OIDC token
+ * AiGatewayCredentials.layer                // AI_GATEWAY_API_KEY, else the Vercel OIDC token
  * AiGatewayCredentials.layerFromEnv         // AI_GATEWAY_API_KEY only
- * AiGatewayCredentials.layerFromVercelOidc  // the Vercel OIDC token only
+ * AiGatewayCredentials.layerFromOidc        // the Vercel OIDC token only
  * AiGatewayCredentials.layerFromApiKey("…") // a fixed value
  * ```
  */
 
 import { Config, Context, Data, Effect, Layer, Option, Redacted } from "effect"
-import * as VercelOidc from "./VercelOidc.js"
+import * as Oidc from "./Oidc.js"
 
 /** The environment variable `layerFromEnv` reads. */
 export const API_KEY_ENV = "AI_GATEWAY_API_KEY"
 
 /** Which layer produced or failed to produce a credential. */
-export type Source = "api-key" | "env" | "vercel-oidc" | "default"
+export type Source = "api-key" | "env" | "oidc" | "default"
 
 /**
  * A credential ready to put on a request. `method` is what the gateway
@@ -46,7 +46,7 @@ export class AiGatewayCredentialsError extends Data.TaggedError("AiGatewayCreden
 export class AiGatewayCredentials extends Context.Service<
   AiGatewayCredentials,
   Effect.Effect<Resolved, AiGatewayCredentialsError>
->()("effect-vercel/ai-gateway/AiGatewayCredentials") {}
+>()("effect-vercel/AiGatewayCredentials") {}
 
 /** The request headers that carry `credentials`. */
 export const formatHeaders = (credentials: Resolved): Record<string, string> => ({
@@ -57,23 +57,16 @@ export const formatHeaders = (credentials: Resolved): Record<string, string> => 
 const hints: Record<Source, ReadonlyArray<string>> = {
   "api-key": [],
   env: [`Set ${API_KEY_ENV} to an AI Gateway API key.`],
-  "vercel-oidc": VercelOidc.hints,
+  oidc: Oidc.hints,
   default: [
     `Set ${API_KEY_ENV} to an AI Gateway API key.`,
     "Or run on Vercel / `vercel env pull` so an OIDC token is available.",
   ],
 }
 
-/**
- * Where a credential may come from. `None` means the place is not configured,
- * so a chain can move on; a failure means it is configured but unusable.
- */
-type Lookup = Effect.Effect<Option.Option<Resolved>, AiGatewayCredentialsError>
-
-const apiKeyLookup: Lookup = Config.option(Config.Redacted(API_KEY_ENV)).pipe(
-  Effect.map(Option.map((token) => ({ method: "api-key" as const, token }))),
-  Effect.catchTag(
-    "ConfigError",
+/** `AI_GATEWAY_API_KEY`, or `None` when unset. Fails only when it can't be read. */
+const envApiKey = Config.option(Config.Redacted(API_KEY_ENV)).pipe(
+  Effect.mapError(
     (cause) =>
       new AiGatewayCredentialsError({
         message: `Failed to read ${API_KEY_ENV}.`,
@@ -84,36 +77,33 @@ const apiKeyLookup: Lookup = Config.option(Config.Redacted(API_KEY_ENV)).pipe(
   ),
 )
 
-const vercelOidcLookup: Lookup = VercelOidc.find.pipe(
-  Effect.map(Option.map((token) => ({ method: "oidc" as const, token }))),
+const fromEnv: Effect.Effect<Resolved, AiGatewayCredentialsError> = Effect.flatMap(
+  envApiKey,
+  Option.match({
+    onNone: () =>
+      Effect.fail(
+        new AiGatewayCredentialsError({
+          message: `${API_KEY_ENV} is not set.`,
+          source: "env",
+          hints: hints.env,
+        }),
+      ),
+    onSome: (token) => Effect.succeed({ method: "api-key" as const, token }),
+  }),
+)
+
+const fromOidc: Effect.Effect<Resolved, AiGatewayCredentialsError> = Oidc.ambientToken.pipe(
+  Effect.map((token) => ({ method: "oidc" as const, token })),
   Effect.mapError(
     (cause) =>
       new AiGatewayCredentialsError({
         message: cause.message,
-        source: "vercel-oidc",
+        source: "oidc",
         hints: cause.hints,
         cause,
       }),
   ),
 )
-
-const firstOf = (lookups: ReadonlyArray<Lookup>): Lookup =>
-  Effect.gen(function* () {
-    for (const lookup of lookups) {
-      const found = yield* lookup
-      if (Option.isSome(found)) return found
-    }
-    return Option.none()
-  })
-
-const toLayer = (lookup: Lookup, source: Source, message: string) =>
-  Layer.succeed(AiGatewayCredentials)(
-    Effect.flatMap(lookup, (found) =>
-      Option.isSome(found)
-        ? Effect.succeed(found.value)
-        : Effect.fail(new AiGatewayCredentialsError({ message, source, hints: hints[source] })),
-    ),
-  )
 
 /** A fixed API key. */
 export const layerFromApiKey = (
@@ -127,26 +117,34 @@ export const layerFromApiKey = (
   )
 
 /** `AI_GATEWAY_API_KEY`: local dev, CI, or anywhere off Vercel. */
-export const layerFromEnv: Layer.Layer<AiGatewayCredentials> = toLayer(
-  apiKeyLookup,
-  "env",
-  `${API_KEY_ENV} is not set.`,
-)
+export const layerFromEnv: Layer.Layer<AiGatewayCredentials> =
+  Layer.succeed(AiGatewayCredentials)(fromEnv)
 
-/** The Vercel OIDC token (see `VercelOidc.find`). Not refreshed when it expires locally. */
-export const layerFromVercelOidc: Layer.Layer<AiGatewayCredentials> = toLayer(
-  vercelOidcLookup,
-  "vercel-oidc",
-  "No Vercel OIDC token is available.",
-)
+/** The Vercel OIDC token (see `Oidc.ambientToken`). */
+export const layerFromOidc: Layer.Layer<AiGatewayCredentials> =
+  Layer.succeed(AiGatewayCredentials)(fromOidc)
 
 /**
- * The default: `layerFromEnv`, then `layerFromVercelOidc`. Same order as
+ * The default: `layerFromEnv`, then `layerFromOidc`. Same order as
  * Vercel's own SDK, so it works locally with an API key and on Vercel without
- * one.
+ * one. Falls back only when the key is unset, not when it can't be read.
  */
-export const layer: Layer.Layer<AiGatewayCredentials> = toLayer(
-  firstOf([apiKeyLookup, vercelOidcLookup]),
-  "default",
-  "No AI Gateway credential found.",
+export const layer: Layer.Layer<AiGatewayCredentials> = Layer.succeed(AiGatewayCredentials)(
+  Effect.flatMap(
+    envApiKey,
+    Option.match({
+      onNone: () =>
+        Effect.mapError(
+          fromOidc,
+          (cause) =>
+            new AiGatewayCredentialsError({
+              message: "No AI Gateway credential found.",
+              source: "default",
+              hints: hints.default,
+              cause,
+            }),
+        ),
+      onSome: (token) => Effect.succeed({ method: "api-key" as const, token }),
+    }),
+  ),
 )

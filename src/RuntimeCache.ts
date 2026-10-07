@@ -7,7 +7,7 @@
  *
  * @example
  * ```ts
- * import { VercelRuntimeCache } from "effect-vercel/runtime-cache"
+ * import * as RuntimeCache from "effect-vercel/RuntimeCache"
  * import { Effect } from "effect"
  * import { PersistedCache } from "effect/persistence"
  *
@@ -17,7 +17,7 @@
  *     timeToLive: () => "1 hour",
  *   })
  *   return yield* users.get(new GetUser({ id: 1 }))
- * }).pipe(Effect.scoped, Effect.provide(VercelRuntimeCache.layer))
+ * }).pipe(Effect.scoped, Effect.provide(RuntimeCache.layer))
  * ```
  */
 

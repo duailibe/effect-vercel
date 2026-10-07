@@ -1,6 +1,6 @@
 import { assert, describe, it } from "@effect/vitest"
-import { ConfigProvider, Effect, Option, Redacted } from "effect"
-import { VercelOidc } from "../src/oidc.js"
+import { ConfigProvider, Effect, Redacted } from "effect"
+import * as Oidc from "../src/Oidc.js"
 
 const REQUEST_CONTEXT = Symbol.for("@vercel/request-context")
 
@@ -18,12 +18,12 @@ const withRequestContext = <A, E, R>(token: string, effect: Effect.Effect<A, E, 
     (holder) => Effect.sync(() => delete holder[REQUEST_CONTEXT]),
   )
 
-describe("VercelOidc", () => {
+describe("Oidc", () => {
   it.effect("prefers the request context header over the env var", () =>
     withRequestContext(
       "from-request",
       Effect.gen(function* () {
-        const token = yield* VercelOidc.token.pipe(withEnv({ VERCEL_OIDC_TOKEN: "from-env" }))
+        const token = yield* Oidc.ambientToken.pipe(withEnv({ VERCEL_OIDC_TOKEN: "from-env" }))
         assert.strictEqual(Redacted.value(token), "from-request")
       }),
     ),
@@ -31,18 +31,33 @@ describe("VercelOidc", () => {
 
   it.effect("falls back to VERCEL_OIDC_TOKEN", () =>
     Effect.gen(function* () {
-      const token = yield* VercelOidc.token.pipe(withEnv({ VERCEL_OIDC_TOKEN: "from-env" }))
+      const token = yield* Oidc.ambientToken.pipe(withEnv({ VERCEL_OIDC_TOKEN: "from-env" }))
       assert.strictEqual(Redacted.value(token), "from-env")
     }),
   )
 
-  it.effect("find is None and token fails when nothing is set", () =>
+  it.effect("fails with hints when nothing is set", () =>
     Effect.gen(function* () {
-      const found = yield* VercelOidc.find.pipe(withEnv({}))
-      assert.isTrue(Option.isNone(found))
-      const error = yield* VercelOidc.token.pipe(withEnv({}), Effect.flip)
+      const error = yield* Oidc.ambientToken.pipe(withEnv({}), Effect.flip)
       assert.strictEqual(error._tag, "VercelOidcError")
       assert.isAbove(error.hints.length, 0)
+    }),
+  )
+
+  it.effect("skips an empty request header", () =>
+    withRequestContext(
+      "",
+      Effect.gen(function* () {
+        const token = yield* Oidc.ambientToken.pipe(withEnv({ VERCEL_OIDC_TOKEN: "from-env" }))
+        assert.strictEqual(Redacted.value(token), "from-env")
+      }),
+    ),
+  )
+
+  it.effect("treats an empty VERCEL_OIDC_TOKEN as unset", () =>
+    Effect.gen(function* () {
+      const error = yield* Oidc.ambientToken.pipe(withEnv({ VERCEL_OIDC_TOKEN: "" }), Effect.flip)
+      assert.strictEqual(error._tag, "VercelOidcError")
     }),
   )
 })

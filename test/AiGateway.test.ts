@@ -3,7 +3,8 @@ import { assert, describe, it } from "@effect/vitest"
 import { ConfigProvider, Effect, Layer } from "effect"
 import { LanguageModel } from "effect/ai"
 import { HttpBody, HttpClient, HttpClientRequest, HttpClientResponse } from "effect/http"
-import { AiGateway, AiGatewayCredentials } from "../src/ai-gateway.js"
+import * as AiGateway from "../src/AiGateway.js"
+import * as AiGatewayCredentials from "../src/AiGatewayCredentials.js"
 
 const gatewayMessage = {
   id: "msg_1",
