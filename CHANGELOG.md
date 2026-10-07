@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.4.0](https://github.com/duailibe/effect-vercel/compare/effect-vercel-v0.3.0...effect-vercel-v0.4.0) (2026-10-07)
+
+
+### ⚠ BREAKING CHANGES
+
+* `VercelOidc.token` is now `Oidc.ambientToken` and `VercelOidc.find` is removed. The barrel entry points `ai-gateway`, `oidc` and `runtime-cache` are replaced by `AiGateway`, `AiGatewayCredentials`, `Oidc` and `RuntimeCache`, imported as namespaces. `layerFromVercelOidc` is now `layerFromOidc`.
+
+### Features
+
+* rename the OIDC token to ambientToken and export one entry point per module ([#7](https://github.com/duailibe/effect-vercel/issues/7)) ([6159578](https://github.com/duailibe/effect-vercel/commit/61595784b6d8128bc6853d1211c48b8ced7c365a))
+
 ## [0.3.0](https://github.com/duailibe/effect-vercel/compare/effect-vercel-v0.2.0...effect-vercel-v0.3.0) (2026-10-01)
 
 
