@@ -44,13 +44,20 @@ describe("Oidc", () => {
     }),
   )
 
-  it.effect("treats empty values as unset", () =>
+  it.effect("skips an empty request header", () =>
     withRequestContext(
       "",
       Effect.gen(function* () {
-        const error = yield* Oidc.ambientToken.pipe(withEnv({ VERCEL_OIDC_TOKEN: "" }), Effect.flip)
-        assert.strictEqual(error._tag, "VercelOidcError")
+        const token = yield* Oidc.ambientToken.pipe(withEnv({ VERCEL_OIDC_TOKEN: "from-env" }))
+        assert.strictEqual(Redacted.value(token), "from-env")
       }),
     ),
+  )
+
+  it.effect("treats an empty VERCEL_OIDC_TOKEN as unset", () =>
+    Effect.gen(function* () {
+      const error = yield* Oidc.ambientToken.pipe(withEnv({ VERCEL_OIDC_TOKEN: "" }), Effect.flip)
+      assert.strictEqual(error._tag, "VercelOidcError")
+    }),
   )
 })

@@ -94,6 +94,19 @@ describe("AiGatewayCredentials", () => {
       }),
     )
 
+    it.effect("does not fall back when AI_GATEWAY_API_KEY can't be read", () =>
+      Effect.gen(function* () {
+        const failing = ConfigProvider.make(() =>
+          Effect.fail(new ConfigProvider.SourceError({ message: "connection refused" })),
+        )
+        const error = yield* resolve(AiGatewayCredentials.layer).pipe(
+          Effect.provideService(ConfigProvider.ConfigProvider, failing),
+          Effect.flip,
+        )
+        assert.strictEqual(error.source, "env")
+      }),
+    )
+
     it.effect("resolves per call, not once", () =>
       Effect.gen(function* () {
         const credentials = yield* Effect.service(AiGatewayCredentials.AiGatewayCredentials).pipe(

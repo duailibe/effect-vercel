@@ -17,7 +17,7 @@
  * ```
  */
 
-import { Config, Context, Data, Effect, Layer, Redacted } from "effect"
+import { Config, Context, Data, Effect, Layer, Option, Redacted } from "effect"
 import * as Oidc from "./Oidc.js"
 
 /** The environment variable `layerFromEnv` reads. */
@@ -64,19 +64,32 @@ const hints: Record<Source, ReadonlyArray<string>> = {
   ],
 }
 
-const fromEnv: Effect.Effect<Resolved, AiGatewayCredentialsError> = Config.Redacted(
-  API_KEY_ENV,
-).pipe(
-  Effect.map((token) => ({ method: "api-key" as const, token })),
+/** `AI_GATEWAY_API_KEY`, or `None` when unset. Fails only when it can't be read. */
+const envApiKey = Config.option(Config.Redacted(API_KEY_ENV)).pipe(
   Effect.mapError(
     (cause) =>
       new AiGatewayCredentialsError({
-        message: `${API_KEY_ENV} is not set.`,
+        message: `Failed to read ${API_KEY_ENV}.`,
         source: "env",
         hints: hints.env,
         cause,
       }),
   ),
+)
+
+const fromEnv: Effect.Effect<Resolved, AiGatewayCredentialsError> = Effect.flatMap(
+  envApiKey,
+  Option.match({
+    onNone: () =>
+      Effect.fail(
+        new AiGatewayCredentialsError({
+          message: `${API_KEY_ENV} is not set.`,
+          source: "env",
+          hints: hints.env,
+        }),
+      ),
+    onSome: (token) => Effect.succeed({ method: "api-key" as const, token }),
+  }),
 )
 
 const fromOidc: Effect.Effect<Resolved, AiGatewayCredentialsError> = Oidc.ambientToken.pipe(
@@ -114,19 +127,24 @@ export const layerFromOidc: Layer.Layer<AiGatewayCredentials> =
 /**
  * The default: `layerFromEnv`, then `layerFromOidc`. Same order as
  * Vercel's own SDK, so it works locally with an API key and on Vercel without
- * one.
+ * one. Falls back only when the key is unset, not when it can't be read.
  */
 export const layer: Layer.Layer<AiGatewayCredentials> = Layer.succeed(AiGatewayCredentials)(
-  fromEnv.pipe(
-    Effect.catch(() => fromOidc),
-    Effect.mapError(
-      (cause) =>
-        new AiGatewayCredentialsError({
-          message: "No AI Gateway credential found.",
-          source: "default",
-          hints: hints.default,
-          cause,
-        }),
-    ),
+  Effect.flatMap(
+    envApiKey,
+    Option.match({
+      onNone: () =>
+        Effect.mapError(
+          fromOidc,
+          (cause) =>
+            new AiGatewayCredentialsError({
+              message: "No AI Gateway credential found.",
+              source: "default",
+              hints: hints.default,
+              cause,
+            }),
+        ),
+      onSome: (token) => Effect.succeed({ method: "api-key" as const, token }),
+    }),
   ),
 )
