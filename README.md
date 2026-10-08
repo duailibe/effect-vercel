@@ -11,6 +11,7 @@ import * as AiGateway from "effect-vercel/AiGateway"
 | ------------------------------------ | ------------------------------------------------------------------------------- |
 | `effect-vercel/AiGateway`            | [Vercel AI Gateway](https://vercel.com/docs/ai-gateway) for Effect AI           |
 | `effect-vercel/AiGatewayCredentials` | How AI Gateway requests authenticate                                            |
+| `effect-vercel/Functions`            | Bindings for `@vercel/functions`: `waitUntil`                                   |
 | `effect-vercel/Oidc`                 | The OIDC token Vercel issues to a deployment                                    |
 | `effect-vercel/RuntimeCache`         | [Runtime Cache](https://vercel.com/docs/runtime-cache) for Effect `Persistence` |
 
@@ -19,7 +20,7 @@ import * as AiGateway from "effect-vercel/AiGateway"
 ```sh
 pnpm add effect-vercel effect
 pnpm add @effect/ai-anthropic   # only for effect-vercel/AiGateway
-pnpm add @vercel/functions      # only for effect-vercel/RuntimeCache
+pnpm add @vercel/functions      # only for effect-vercel/Functions and RuntimeCache
 ```
 
 ## AI Gateway
@@ -119,6 +120,29 @@ unset. It fails with an `OidcError` when neither is set.
 
 It reads the token on every run, since it rotates per request. It does not refresh an
 expired local token; re-run `vercel env pull`.
+
+## Functions
+
+`Functions.waitUntil(fiber)` keeps the Function running until `fiber` ends, as `waitUntil`
+from `@vercel/functions` does for a promise. Use it to finish work after the response is sent.
+
+```ts
+import * as Functions from "effect-vercel/Functions"
+import { Effect } from "effect"
+
+const handler = Effect.gen(function* () {
+  yield* Effect.forkDetach(sendReceipt).pipe(Effect.tap(Functions.waitUntil))
+  return new Response("OK")
+})
+```
+
+- Fork with `Effect.forkDetach`, or into a scope that outlives the request. A child fiber is
+  interrupted when the request fiber ends, whatever `waitUntil` says.
+- The fiber keeps the request's services. Acquire resources it needs inside its own
+  `Effect.scoped`, since the request's resources may be released first.
+- Failures are not reported. Handle or log them in the forked effect.
+- Vercel stops the work when the Function reaches its maximum duration.
+- Off Vercel, `waitUntil` does nothing and the fiber runs in the background.
 
 ## Runtime Cache
 

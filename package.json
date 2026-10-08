@@ -1,14 +1,15 @@
 {
   "name": "effect-vercel",
   "version": "0.4.0",
-  "description": "Effect integrations for Vercel: AI Gateway, OIDC, Runtime Cache",
+  "description": "Effect integrations for Vercel: AI Gateway, OIDC, Runtime Cache, waitUntil",
   "keywords": [
     "ai-gateway",
     "effect",
     "effect-ai",
     "oidc",
     "runtime-cache",
-    "vercel"
+    "vercel",
+    "wait-until"
   ],
   "homepage": "https://github.com/duailibe/effect-vercel#readme",
   "bugs": {
@@ -29,6 +30,7 @@
   "exports": {
     "./AiGateway": "./dist/AiGateway.js",
     "./AiGatewayCredentials": "./dist/AiGatewayCredentials.js",
+    "./Functions": "./dist/Functions.js",
     "./Oidc": "./dist/Oidc.js",
     "./RuntimeCache": "./dist/RuntimeCache.js",
     "./package.json": "./package.json"
