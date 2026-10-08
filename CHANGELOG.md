@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.0](https://github.com/duailibe/effect-vercel/compare/effect-vercel-v0.4.0...effect-vercel-v0.5.0) (2026-10-08)
+
+
+### Features
+
+* add Functions.waitUntil to keep a Function running until a fiber ends ([#9](https://github.com/duailibe/effect-vercel/issues/9)) ([0b4cf52](https://github.com/duailibe/effect-vercel/commit/0b4cf526c10409ff67e6435c39f073e307c3778a))
+
 ## [0.4.0](https://github.com/duailibe/effect-vercel/compare/effect-vercel-v0.3.0...effect-vercel-v0.4.0) (2026-10-07)
 
 
