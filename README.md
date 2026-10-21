@@ -13,6 +13,7 @@ import * as AiGateway from "effect-vercel/AiGateway"
 | `effect-vercel/AiGatewayCredentials` | How AI Gateway requests authenticate                                            |
 | `effect-vercel/Functions`            | Bindings for `@vercel/functions`: `waitUntil`                                   |
 | `effect-vercel/Oidc`                 | The OIDC token Vercel issues to a deployment                                    |
+| `effect-vercel/PgClient`             | `@effect/sql-pg` pool that doesn't leave connections open on frozen instances   |
 | `effect-vercel/RuntimeCache`         | [Runtime Cache](https://vercel.com/docs/runtime-cache) for Effect `Persistence` |
 
 ## Install
@@ -20,7 +21,8 @@ import * as AiGateway from "effect-vercel/AiGateway"
 ```sh
 pnpm add effect-vercel effect
 pnpm add @effect/ai-anthropic   # only for effect-vercel/AiGateway
-pnpm add @vercel/functions      # only for effect-vercel/Functions and RuntimeCache
+pnpm add @vercel/functions      # only for effect-vercel/Functions, PgClient and RuntimeCache
+pnpm add @effect/sql-pg         # only for effect-vercel/PgClient
 ```
 
 ## AI Gateway
@@ -143,6 +145,40 @@ const handler = Effect.gen(function* () {
 - Failures are not reported. Handle or log them in the forked effect.
 - Vercel stops the work when the Function reaches its maximum duration.
 - Off Vercel, `waitUntil` does nothing and the fiber runs in the background.
+
+## Postgres
+
+`PgClient.layer` is `PgClient.layer` from `@effect/sql-pg` that keeps the Function instance up
+until the pool has closed its connections.
+
+Vercel freezes an instance once no request or `waitUntil` promise is left. A frozen instance
+keeps its sockets open, so a pooler like PgBouncer still counts them against `max_client_conn`.
+During a deploy many instances freeze at once, which can use up the limit. `attachDatabasePool`
+from `@vercel/functions` handles this for node-postgres pools by waiting out the idle timeout
+after each release. It doesn't support the Effect pool, which also closes an idle connection up
+to twice its `idleTimeout` after its last use.
+
+```ts
+import * as PgClient from "effect-vercel/PgClient"
+import { Redacted } from "effect"
+
+const SqlLive = PgClient.layer({
+  url: Redacted.make(process.env.DATABASE_URL!),
+  maxConnections: 3,
+  idleTimeout: "5 seconds",
+})
+```
+
+- It takes the same config as `@effect/sql-pg`, except `stream`: it opens each socket itself
+  and counts it until it closes. While a socket is open, one `waitUntil` promise keeps the
+  instance up.
+- Each statement moves that promise to the request running it, so a busy instance never keeps
+  a finished request open. The wait also ends a second before the request's deadline.
+- It moves the promise from `Statement.CurrentTransformer`. To use your own transformer as
+  well, provide it to this layer and it runs after.
+- Keep `idleTimeout` short. The instance stays up until the pool closes its last idle
+  connection.
+- Off Vercel, it behaves like the plain layer.
 
 ## Runtime Cache
 
