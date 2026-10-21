@@ -21,8 +21,11 @@ export const fakeRequests = Effect.acquireRelease(
   () => Effect.sync(() => delete holder[REQUEST_CONTEXT]),
 )
 
-/** Whether `promise` settles before the event loop gets around to it. */
-export const isSettled = (promise: Promise<unknown>) =>
+/**
+ * Whether `promise` settles within `ms`, by default before the event loop
+ * gets around to it.
+ */
+export const isSettled = (promise: Promise<unknown>, ms = 0) =>
   Effect.promise(() =>
-    Promise.race([promise.then(() => true), new Promise<boolean>((r) => setTimeout(r, 0, false))]),
+    Promise.race([promise.then(() => true), new Promise<boolean>((r) => setTimeout(r, ms, false))]),
   )

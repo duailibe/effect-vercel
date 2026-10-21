@@ -71,13 +71,15 @@ describe("PgClient", () => {
 
   it.effect("ends the wait a second before the request's deadline", () =>
     Effect.gen(function* () {
-      const promises = (yield* fakeRequests)(Date.now() + 1_000)
+      const promises = (yield* fakeRequests)(Date.now() + 1_100)
       const server = yield* silentServer
       yield* Effect.gen(function* () {
         const sql = yield* SqlClient.SqlClient
         yield* Effect.forkChild(sql`select 1`)
         yield* Queue.take(server.connections)
-        yield* Effect.promise(() => promises[0]!)
+        assert.isFalse(yield* isSettled(promises[0]!))
+        // The socket stays open, so only the cutoff, about 100ms away, ends it.
+        assert.isTrue(yield* isSettled(promises[0]!, 600))
       }).pipe(Effect.provide(server.layer))
     }),
   )
