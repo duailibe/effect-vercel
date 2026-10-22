@@ -86,6 +86,9 @@ class Repo extends Context.Service<
   )
 }
 
+/** A service an `onAcquire` hook can require. */
+class Name extends Context.Service<Name, string>()("Name") {}
+
 describe("PgClient", () => {
   it.effect("keeps the instance up until the pool's socket closes", () =>
     Effect.gen(function* () {
@@ -150,19 +153,25 @@ describe("PgClient", () => {
     }),
   )
 
-  it.effect("runs the onAcquire it is given", () =>
+  it.effect("runs the onAcquire it is given, with its services", () =>
     Effect.gen(function* () {
       const server = yield* fakePostgres
-      let acquired = 0
-      const onAcquire = Effect.sync(() => {
-        acquired++
+      const acquired: Array<string> = []
+      const onAcquire = Effect.gen(function* () {
+        acquired.push(yield* Name)
       })
       yield* Effect.gen(function* () {
         const sql = yield* SqlClient.SqlClient
         yield* sql`select 1`
         yield* sql`select 2`
-        assert.strictEqual(acquired, 2)
-      }).pipe(Effect.provide(PgClient.layer({ ...server.config, onAcquire })))
+        assert.deepStrictEqual(acquired, ["app", "app"])
+      }).pipe(
+        Effect.provide(
+          PgClient.layer({ ...server.config, onAcquire }).pipe(
+            Layer.provide(Layer.succeed(Name, "app")),
+          ),
+        ),
+      )
     }),
   )
 })

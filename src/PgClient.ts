@@ -28,7 +28,6 @@ import * as Net from "node:net"
 import { PgClient } from "@effect/sql-pg"
 import { Duration, Effect, Layer, Redacted } from "effect"
 import { constVoid } from "effect/Function"
-import type { SqlClient, SqlError } from "effect/sql"
 
 /**
  * Vercel exposes the current request's context on a well-known global symbol.
@@ -89,13 +88,13 @@ const makeKeepAlive = () => {
 }
 
 /** `PgClient.PgPoolConfig` without `stream`, which this module sets. */
-export type Config = Omit<PgClient.PgPoolConfig, "stream">
+export type Config<R = never> = Omit<PgClient.PgPoolConfig<R>, "stream">
 
 /**
  * Opens the TCP or Unix socket `@effect/sql-pg` would open for `config`.
  * It still runs TLS and the startup on it.
  */
-const connect = (config: Config): Net.Socket => {
+const connect = (config: Config<unknown>): Net.Socket => {
   const url = config.url && new URL(Redacted.value(config.url))
   const param = (name: string) => url?.searchParams.getAll(name).at(-1)
   const urlHost = url?.hostname && decodeURIComponent(url.hostname.replace(/^\[(.*)\]$/, "$1"))
@@ -123,9 +122,7 @@ const connect = (config: Config): Net.Socket => {
  * wait to the request that takes each connection, through `onAcquire`. An
  * `onAcquire` in `config` still runs, after that.
  */
-export const layer = (
-  config: Config,
-): Layer.Layer<PgClient.PgClient | SqlClient.SqlClient, SqlError.SqlError> =>
+export const layer = <R = never>(config: Config<R>) =>
   Layer.suspend(() => {
     const keepAlive = makeKeepAlive()
     const follow = Effect.sync(keepAlive.follow)
