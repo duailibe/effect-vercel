@@ -26,28 +26,48 @@
 
 import * as Net from "node:net"
 import { PgClient } from "@effect/sql-pg"
-import { getDeadline, waitUntil } from "@vercel/functions"
 import { Duration, Effect, Layer, Redacted } from "effect"
 import { constVoid } from "effect/Function"
-import { type SqlClient, type SqlError, Statement } from "effect/sql"
+import type { SqlClient, SqlError } from "effect/sql"
+
+/**
+ * Vercel exposes the current request's context on a well-known global symbol.
+ * `@vercel/functions` reads `waitUntil` and the deadline from there. Off
+ * Vercel, or outside a request, there is no `waitUntil`.
+ */
+const REQUEST_CONTEXT = Symbol.for("@vercel/request-context")
+
+type RequestContext = {
+  readonly waitUntil?: (promise: Promise<unknown>) => void
+  readonly deadline?: string
+}
+
+const currentRequest = (): RequestContext | undefined => {
+  const holder = globalThis as typeof globalThis & {
+    [REQUEST_CONTEXT]?: { get?: () => RequestContext | undefined }
+  }
+  return holder[REQUEST_CONTEXT]?.get?.()
+}
 
 /**
  * Keeps the instance up while a tracked socket is open. One `waitUntil`
  * promise holds it, and `follow` moves it to the request running now, as
  * `attachDatabasePool` does, so a busy instance never holds a finished
  * request open. The wait also ends a second before the request's deadline.
+ * Outside a request, `follow` keeps the wait where it is.
  */
 const makeKeepAlive = () => {
   let open = 0
   let release = constVoid
 
   const follow = () => {
-    if (open === 0) return
+    const request = currentRequest()
+    if (open === 0 || request?.waitUntil === undefined) return
     release()
-    const deadline = getDeadline()
-    waitUntil(
+    const cutoff = Date.parse(request.deadline ?? "") - 1_000
+    request.waitUntil(
       new Promise<void>((resolve) => {
-        const timer = deadline && setTimeout(resolve, deadline.getTime() - Date.now() - 1_000)
+        const timer = Number.isNaN(cutoff) ? undefined : setTimeout(resolve, cutoff - Date.now())
         release = () => {
           clearTimeout(timer)
           resolve()
@@ -99,26 +119,19 @@ const connect = (config: Config): Net.Socket => {
  * until the pool has closed every connection, or the request's deadline
  * comes. Off Vercel it behaves like the plain layer.
  *
- * It opens each socket itself, through the `stream` option, and sets
- * `Statement.CurrentTransformer` to move the wait to the request running
- * each statement. A transformer provided to this layer still runs, after
- * that.
+ * It opens each socket itself, through the `stream` option, and moves the
+ * wait to the request that takes each connection, through `onAcquire`. An
+ * `onAcquire` in `config` still runs, after that.
  */
 export const layer = (
   config: Config,
 ): Layer.Layer<PgClient.PgClient | SqlClient.SqlClient, SqlError.SqlError> =>
-  Layer.unwrap(
-    Effect.gen(function* () {
-      const keepAlive = makeKeepAlive()
-      const transform = yield* Statement.CurrentTransformer
-      return Layer.merge(
-        PgClient.layer({ ...config, stream: () => keepAlive.track(connect(config)) }),
-        Layer.succeed(Statement.CurrentTransformer)((statement, sql, fiber, span) =>
-          Effect.suspend(() => {
-            keepAlive.follow()
-            return transform ? transform(statement, sql, fiber, span) : Effect.succeed(statement)
-          }),
-        ),
-      )
-    }),
-  )
+  Layer.suspend(() => {
+    const keepAlive = makeKeepAlive()
+    const follow = Effect.sync(keepAlive.follow)
+    return PgClient.layer({
+      ...config,
+      stream: () => keepAlive.track(connect(config)),
+      onAcquire: config.onAcquire ? Effect.andThen(follow, config.onAcquire) : follow,
+    })
+  })

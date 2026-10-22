@@ -21,7 +21,7 @@ import * as AiGateway from "effect-vercel/AiGateway"
 ```sh
 pnpm add effect-vercel effect
 pnpm add @effect/ai-anthropic   # only for effect-vercel/AiGateway
-pnpm add @vercel/functions      # only for effect-vercel/Functions, PgClient and RuntimeCache
+pnpm add @vercel/functions      # only for effect-vercel/Functions and RuntimeCache
 pnpm add @effect/sql-pg         # only for effect-vercel/PgClient
 ```
 
@@ -172,10 +172,10 @@ const SqlLive = PgClient.layer({
 - It takes the same config as `@effect/sql-pg`, except `stream`: it opens each socket itself
   and counts it until it closes. While a socket is open, one `waitUntil` promise keeps the
   instance up.
-- Each statement moves that promise to the request running it, so a busy instance never keeps
-  a finished request open. The wait also ends a second before the request's deadline.
-- It moves the promise from `Statement.CurrentTransformer`. To use your own transformer as
-  well, provide it to this layer and it runs after.
+- Each time a request takes a connection from the pool, the promise moves to that request, so a
+  busy instance never keeps a finished request open. The wait also ends a second before the
+  request's deadline.
+- It moves the promise from `onAcquire`. An `onAcquire` in your config still runs, after.
 - Keep `idleTimeout` short. The instance stays up until the pool closes its last idle
   connection.
 - Off Vercel, it behaves like the plain layer.

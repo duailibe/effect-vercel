@@ -6,7 +6,7 @@ import { fakeRequests, isSettled } from "./requestContext.js"
 describe("Functions", () => {
   it.effect("waits until the fiber ends", () =>
     Effect.gen(function* () {
-      const promises = (yield* fakeRequests)()
+      const promises = (yield* fakeRequests).enter()
       const done = yield* Deferred.make<void>()
       const fiber = yield* Effect.forkDetach(Deferred.await(done)).pipe(
         Effect.tap(Functions.waitUntil),
@@ -22,7 +22,7 @@ describe("Functions", () => {
 
   it.effect("resolves when the fiber fails", () =>
     Effect.gen(function* () {
-      const promises = (yield* fakeRequests)()
+      const promises = (yield* fakeRequests).enter()
       const fiber = yield* Effect.forkDetach(Effect.fail("boom")).pipe(
         Effect.tap(Functions.waitUntil),
       )

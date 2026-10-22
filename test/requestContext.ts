@@ -5,18 +5,26 @@ const holder = globalThis as Record<PropertyKey, unknown>
 
 /**
  * Fakes the context Vercel gives each request, until the scope closes.
- * Returns `enter`, which starts a request, with a deadline if given, and
- * returns the promises passed to its `waitUntil`.
+ * `enter` starts a request, with a deadline if given, and returns the
+ * promises passed to its `waitUntil`. `leave` ends it, so code runs outside
+ * any request.
  */
 export const fakeRequests = Effect.acquireRelease(
   Effect.sync(() => {
     let current = {}
     holder[REQUEST_CONTEXT] = { get: () => current }
-    return (deadline?: number) => {
+    const enter = (deadline?: number) => {
       const promises: Array<Promise<unknown>> = []
-      current = { waitUntil: (promise: Promise<unknown>) => promises.push(promise), deadline }
+      current = {
+        waitUntil: (promise: Promise<unknown>) => promises.push(promise),
+        deadline: deadline && new Date(deadline).toISOString(),
+      }
       return promises
     }
+    const leave = () => {
+      current = {}
+    }
+    return { enter, leave }
   }),
   () => Effect.sync(() => delete holder[REQUEST_CONTEXT]),
 )
