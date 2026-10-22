@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.6.0](https://github.com/duailibe/effect-vercel/compare/effect-vercel-v0.5.0...effect-vercel-v0.6.0) (2026-10-22)
+
+
+### Features
+
+* add PgClient layer that keeps instances up while connections are open ([#11](https://github.com/duailibe/effect-vercel/issues/11)) ([9459074](https://github.com/duailibe/effect-vercel/commit/9459074f0bc8ede36af61e1fa4b1748d4f16b1c1))
+
 ## [0.5.0](https://github.com/duailibe/effect-vercel/compare/effect-vercel-v0.4.0...effect-vercel-v0.5.0) (2026-10-08)
 
 
