@@ -13,6 +13,7 @@ import * as AiGateway from "effect-vercel/AiGateway"
 | `effect-vercel/AiGatewayCredentials` | How AI Gateway requests authenticate                                            |
 | `effect-vercel/Functions`            | Bindings for `@vercel/functions`: `waitUntil`                                   |
 | `effect-vercel/Oidc`                 | The OIDC token Vercel issues to a deployment                                    |
+| `effect-vercel/Otlp`                 | Keeps a Function running until its OTLP telemetry is exported                   |
 | `effect-vercel/PgClient`             | `@effect/sql-pg` pool that doesn't leave connections open on frozen instances   |
 | `effect-vercel/RuntimeCache`         | [Runtime Cache](https://vercel.com/docs/runtime-cache) for Effect `Persistence` |
 
@@ -145,6 +146,58 @@ const handler = Effect.gen(function* () {
 - Failures are not reported. Handle or log them in the forked effect.
 - Vercel stops the work when the Function reaches its maximum duration.
 - Off Vercel, `waitUntil` does nothing and the fiber runs in the background.
+
+## OTLP
+
+Effect's OTLP exporters buffer spans, logs and metrics and export them on an interval. Vercel can
+suspend the instance once the response is sent, so the interval may never fire and the telemetry
+is lost. `effect-vercel/Otlp` flushes the exporters when each request ends and keeps the Function
+running until the flush is done.
+
+For an `HttpRouter` app, add the `flushAfterRequest` middleware next to your routes. Provide the
+OTLP layer with `Layer.provideMerge`, so its tracer and logger reach each request:
+
+```ts
+import * as VercelOtlp from "effect-vercel/Otlp"
+import { Layer } from "effect"
+import { FetchHttpClient, HttpRouter } from "effect/http"
+import { Otlp } from "effect/observability"
+
+const { handler } = HttpRouter.toWebHandler(
+  Layer.merge(Routes, VercelOtlp.flushAfterRequest).pipe(
+    Layer.provideMerge(Otlp.layerJson({ baseUrl, resource })),
+    Layer.provide(FetchHttpClient.layer),
+  ),
+)
+```
+
+For another entry point, such as a queue consumer, run `VercelOtlp.flushOnClose` at the start of
+the request in a scope that closes when the request ends:
+
+```ts
+// `services` holds the app's services, including the OTLP layer's Flusher.
+const runSync = Effect.runSyncWith(services)
+const scope = runSync(Scope.make())
+runSync(VercelOtlp.flushOnClose.pipe(Scope.provide(scope)))
+
+// When the request ends:
+runSync(Scope.close(scope, Exit.void))
+```
+
+- The flush starts when the request's scope closes. For an `HttpRouter` app, that is after the
+  response body is sent, so telemetry recorded while a body streams is included.
+- Every request flushes, sampled or not, since logs and metrics are exported either way. Spans and
+  logs are sent only when some are buffered. Metrics send a snapshot on every flush.
+- The Function waits for the flush for at most 2 seconds.
+- Both need the `OtlpExporter.Flusher` that the OTLP layers provide, so leaving them out fails to
+  compile.
+- They register the wait with Vercel when the request starts, while its context is current. Run
+  `flushOnClose` first in its scope, so finalizers added later, such as ending a span, run before
+  the flush.
+- `flush` can't wait for an export the interval already started, and skips exporters disabled
+  after a failure.
+- Off Vercel, or outside a request, they do nothing and the exporters' interval sends the
+  telemetry.
 
 ## Postgres
 

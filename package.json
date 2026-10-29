@@ -1,12 +1,14 @@
 {
   "name": "effect-vercel",
   "version": "0.6.0",
-  "description": "Effect integrations for Vercel: AI Gateway, OIDC, Postgres pools, Runtime Cache, waitUntil",
+  "description": "Effect integrations for Vercel: AI Gateway, OIDC, OTLP flushing, Postgres pools, Runtime Cache, waitUntil",
   "keywords": [
     "ai-gateway",
     "effect",
     "effect-ai",
     "oidc",
+    "opentelemetry",
+    "otlp",
     "postgres",
     "runtime-cache",
     "vercel",
@@ -33,6 +35,7 @@
     "./AiGatewayCredentials": "./dist/AiGatewayCredentials.js",
     "./Functions": "./dist/Functions.js",
     "./Oidc": "./dist/Oidc.js",
+    "./Otlp": "./dist/Otlp.js",
     "./PgClient": "./dist/PgClient.js",
     "./RuntimeCache": "./dist/RuntimeCache.js",
     "./package.json": "./package.json"
@@ -50,13 +53,13 @@
     "prepublishOnly": "pnpm check && pnpm test && pnpm build"
   },
   "devDependencies": {
-    "@effect/ai-anthropic": "^4.0.0",
+    "@effect/ai-anthropic": "^4.1.0",
     "@effect/language-service": "^0.87.3",
-    "@effect/sql-pg": "^4.0.6",
-    "@effect/vitest": "^4.0.0",
+    "@effect/sql-pg": "^4.1.0",
+    "@effect/vitest": "^4.1.0",
     "@types/node": "^24",
     "@vercel/functions": "^3.9.9",
-    "effect": "^4.0.6",
+    "effect": "^4.1.0",
     "oxfmt": "^0.68.0",
     "oxlint": "^1.83.0",
     "tsdown": "^0.23.0",
@@ -67,7 +70,7 @@
     "@effect/ai-anthropic": "^4.0.0",
     "@effect/sql-pg": "^4.0.6",
     "@vercel/functions": "^3.9.9",
-    "effect": "^4.0.0"
+    "effect": "^4.1.0"
   },
   "peerDependenciesMeta": {
     "@effect/ai-anthropic": {
