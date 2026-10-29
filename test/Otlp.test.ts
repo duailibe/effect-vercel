@@ -65,10 +65,12 @@ describe("Otlp", () => {
       )
 
       yield* Scope.close(scope, Exit.void)
-      assert.isFalse(yield* isSettled(promises[0]!))
+      yield* Effect.yieldNow
       assert.strictEqual(flusher.flushes(), 1)
 
-      yield* TestClock.adjust("2 seconds")
+      yield* TestClock.adjust("1999 millis")
+      assert.isFalse(yield* isSettled(promises[0]!))
+      yield* TestClock.adjust("1 millis")
       assert.isTrue(yield* isSettled(promises[0]!))
     }),
   )

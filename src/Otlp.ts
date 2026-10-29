@@ -16,7 +16,7 @@
  *
  * const { handler } = HttpRouter.toWebHandler(
  *   Layer.merge(Routes, VercelOtlp.flushAfterRequest).pipe(
- *     Layer.provide(Otlp.layerJson({ baseUrl, resource })),
+ *     Layer.provideMerge(Otlp.layerJson({ baseUrl, resource })),
  *     Layer.provide(FetchHttpClient.layer),
  *   ),
  * )
@@ -30,10 +30,10 @@ import { currentRequest } from "./internal/requestContext.js"
 
 const flushOnCloseWith = (flusher: OtlpExporter.Flusher["Service"]) =>
   Effect.suspend(() => {
-    const waitUntil = currentRequest()?.waitUntil
-    if (waitUntil === undefined) return Effect.void
+    const request = currentRequest()
+    if (request?.waitUntil === undefined) return Effect.void
     const { promise, resolve } = Promise.withResolvers<void>()
-    waitUntil(promise)
+    request.waitUntil(promise)
     // Forked, so a streamed body ends without waiting for the export.
     return Effect.addFinalizer(() =>
       flusher.flush.pipe(
@@ -42,7 +42,10 @@ const flushOnCloseWith = (flusher: OtlpExporter.Flusher["Service"]) =>
         Effect.forkDetach,
       ),
     )
-  })
+  }).pipe(
+    // An interrupt before the finalizer is added would leave the wait open.
+    Effect.uninterruptible,
+  )
 
 /**
  * When the current scope closes, flushes the OTLP exporters and keeps the

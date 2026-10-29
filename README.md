@@ -154,7 +154,8 @@ suspend the instance once the response is sent, so the interval may never fire a
 is lost. `effect-vercel/Otlp` flushes the exporters when each request ends and keeps the Function
 running until the flush is done.
 
-For an `HttpRouter` app, add the `flushAfterRequest` middleware next to your routes:
+For an `HttpRouter` app, add the `flushAfterRequest` middleware next to your routes. Provide the
+OTLP layer with `Layer.provideMerge`, so its tracer and logger reach each request:
 
 ```ts
 import * as VercelOtlp from "effect-vercel/Otlp"
@@ -164,7 +165,7 @@ import { Otlp } from "effect/observability"
 
 const { handler } = HttpRouter.toWebHandler(
   Layer.merge(Routes, VercelOtlp.flushAfterRequest).pipe(
-    Layer.provide(Otlp.layerJson({ baseUrl, resource })),
+    Layer.provideMerge(Otlp.layerJson({ baseUrl, resource })),
     Layer.provide(FetchHttpClient.layer),
   ),
 )
@@ -185,11 +186,13 @@ runSync(Scope.close(scope, Exit.void))
 
 - The flush starts when the request's scope closes. For an `HttpRouter` app, that is after the
   response body is sent, so telemetry recorded while a body streams is included.
-- Every request flushes, sampled or not, since logs and metrics are exported either way. A flush
-  with nothing buffered sends nothing.
+- Every request flushes, sampled or not, since logs and metrics are exported either way. Spans and
+  logs are sent only when some are buffered. Metrics send a snapshot on every flush.
 - The Function waits for the flush for at most 2 seconds.
 - Both need the `OtlpExporter.Flusher` that the OTLP layers provide, so leaving them out fails to
-  compile. `Otlp.layer` and its variants declare it from Effect 4.1.0.
+  compile. With `Otlp.layer` and its variants, this needs Effect 4.1.0 or later, where they provide
+  it. Don't provide `OtlpExporter.layerFlusher` yourself: no exporter registers with it, so the
+  flush does nothing.
 - They register the wait with Vercel when the request starts, while its context is current. Run
   `flushOnClose` first in its scope, so finalizers added later, such as ending a span, run before
   the flush.
