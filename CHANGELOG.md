@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.7.0](https://github.com/duailibe/effect-vercel/compare/effect-vercel-v0.6.0...effect-vercel-v0.7.0) (2026-10-29)
+
+
+### Features
+
+* keep Vercel Functions running until their OTLP telemetry is exported ([#13](https://github.com/duailibe/effect-vercel/issues/13)) ([3c7658e](https://github.com/duailibe/effect-vercel/commit/3c7658e98654b2cd1d763d1e4c284e475e79cd9c))
+
 ## [0.6.0](https://github.com/duailibe/effect-vercel/compare/effect-vercel-v0.5.0...effect-vercel-v0.6.0) (2026-10-22)
 
 
