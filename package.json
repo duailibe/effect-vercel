@@ -70,7 +70,7 @@
     "@effect/ai-anthropic": "^4.0.0",
     "@effect/sql-pg": "^4.0.6",
     "@vercel/functions": "^3.9.9",
-    "effect": "^4.0.0"
+    "effect": "^4.1.0"
   },
   "peerDependenciesMeta": {
     "@effect/ai-anthropic": {

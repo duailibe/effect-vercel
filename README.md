@@ -190,9 +190,7 @@ runSync(Scope.close(scope, Exit.void))
   logs are sent only when some are buffered. Metrics send a snapshot on every flush.
 - The Function waits for the flush for at most 2 seconds.
 - Both need the `OtlpExporter.Flusher` that the OTLP layers provide, so leaving them out fails to
-  compile. With `Otlp.layer` and its variants, this needs Effect 4.1.0 or later, where they provide
-  it. Don't provide `OtlpExporter.layerFlusher` yourself: no exporter registers with it, so the
-  flush does nothing.
+  compile.
 - They register the wait with Vercel when the request starts, while its context is current. Run
   `flushOnClose` first in its scope, so finalizers added later, such as ending a span, run before
   the flush.
