@@ -1,6 +1,6 @@
 {
   "name": "effect-vercel",
-  "version": "0.7.0",
+  "version": "0.8.0",
   "description": "Effect integrations for Vercel: AI Gateway, OIDC, OTLP flushing, Postgres pools, Runtime Cache, waitUntil",
   "keywords": [
     "ai-gateway",
