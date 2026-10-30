@@ -38,6 +38,9 @@ const sha256 = (key: string) => createHash("sha256").update(key).digest("hex")
  * headers, where non-Latin-1 characters would make the write fail. TTLs round
  * up to whole seconds, the cache's resolution.
  *
+ * Each call runs in a `RuntimeCache.<operation>` client span with the store
+ * id, and `get` records whether it hit. Keys are not span attributes.
+ *
  * `getCache()` hashes keys with a 32-bit hash by default, which can collide.
  * Pass a cache made with a stronger `keyHashFunction`, as `layerBacking` does.
  */
@@ -47,6 +50,11 @@ export const makeBacking = (cache: RuntimeCache): Persistence.BackingPersistence
       Effect.sync(() => {
         const prefixed = (key: string) => JSON.stringify([storeId, key])
         const tag = `effect-persistence:${sha256(storeId)}`
+        const traced = (operation: string) =>
+          Effect.withSpan(`RuntimeCache.${operation}`, {
+            kind: "client",
+            attributes: { "cache.store_id": storeId },
+          })
 
         const get = (key: string) =>
           Effect.tryPromise({
@@ -57,6 +65,8 @@ export const makeBacking = (cache: RuntimeCache): Persistence.BackingPersistence
             Effect.map((value) =>
               typeof value === "object" && value !== null ? value : undefined,
             ),
+            Effect.tap((value) => Effect.annotateCurrentSpan("cache.hit", value !== undefined)),
+            traced("get"),
           )
 
         const set = (key: string, value: object, ttl: Duration.Duration | undefined) =>
@@ -69,7 +79,7 @@ export const makeBacking = (cache: RuntimeCache): Persistence.BackingPersistence
               }),
             catch: (cause) =>
               new Persistence.PersistenceError({ message: `Failed to set key ${key}`, cause }),
-          })
+          }).pipe(traced("set"))
 
         return {
           get,
@@ -87,12 +97,12 @@ export const makeBacking = (cache: RuntimeCache): Persistence.BackingPersistence
               try: () => cache.delete(prefixed(key)),
               catch: (cause) =>
                 new Persistence.PersistenceError({ message: `Failed to remove key ${key}`, cause }),
-            }),
+            }).pipe(traced("remove")),
           clear: Effect.tryPromise({
             try: () => cache.expireTag(tag),
             catch: (cause) =>
               new Persistence.PersistenceError({ message: `Failed to clear ${storeId}`, cause }),
-          }),
+          }).pipe(traced("clear")),
         }
       }),
   })

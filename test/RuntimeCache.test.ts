@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto"
 import { assert, describe, it } from "@effect/vitest"
 import type { RuntimeCache as VercelCache } from "@vercel/functions"
-import { Duration, Effect, Exit, Schema } from "effect"
+import { Duration, Effect, Exit, Schema, Tracer } from "effect"
 import { Persistable, PersistedCache, Persistence } from "effect/persistence"
 import * as RuntimeCache from "../src/RuntimeCache.js"
 
@@ -84,6 +84,44 @@ describe("RuntimeCache", () => {
         { key: '["users","a"]', name: "", ttl: 2, tags },
         { key: '["users","b"]', name: "", tags },
       ])
+    }).pipe(Effect.scoped),
+  )
+
+  it.effect("traces each call with the store id and hit, but not the key", () =>
+    Effect.gen(function* () {
+      const spans: Array<Tracer.NativeSpan> = []
+      const tracer = Tracer.make({
+        span: (options) => {
+          const span = new Tracer.NativeSpan(options)
+          spans.push(span)
+          return span
+        },
+      })
+      const cache: VercelCache = {
+        get: async (key) => (key === '["users","a"]' ? {} : null),
+        set: async () => {},
+        delete: async () => {},
+        expireTag: async () => {},
+      }
+      const store = yield* RuntimeCache.makeBacking(cache).make("users")
+      yield* Effect.all([
+        store.get("a"),
+        store.get("b"),
+        store.set("a", {}, undefined),
+        store.remove("a"),
+        store.clear,
+      ]).pipe(Effect.withTracer(tracer))
+      const users = { "cache.store_id": "users" }
+      assert.deepStrictEqual(
+        spans.map((span) => [span.name, span.kind, Object.fromEntries(span.attributes)]),
+        [
+          ["RuntimeCache.get", "client", { ...users, "cache.hit": true }],
+          ["RuntimeCache.get", "client", { ...users, "cache.hit": false }],
+          ["RuntimeCache.set", "client", users],
+          ["RuntimeCache.remove", "client", users],
+          ["RuntimeCache.clear", "client", users],
+        ],
+      )
     }).pipe(Effect.scoped),
   )
 
