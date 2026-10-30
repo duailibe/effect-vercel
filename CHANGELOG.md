@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.8.0](https://github.com/duailibe/effect-vercel/compare/effect-vercel-v0.7.0...effect-vercel-v0.8.0) (2026-10-30)
+
+
+### Features
+
+* show Runtime Cache calls and hits in traces ([#15](https://github.com/duailibe/effect-vercel/issues/15)) ([89ceed4](https://github.com/duailibe/effect-vercel/commit/89ceed48139a7a7b1295024871b8c5dfee26bdc7))
+
 ## [0.7.0](https://github.com/duailibe/effect-vercel/compare/effect-vercel-v0.6.0...effect-vercel-v0.7.0) (2026-10-29)
 
 
