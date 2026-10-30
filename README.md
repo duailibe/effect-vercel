@@ -266,6 +266,8 @@ const program = Effect.gen(function* () {
   you build your own.
 - Each entry is tagged `effect-persistence:<sha256 of storeId>`. `clear` expires that tag.
 - TTLs round up to whole seconds.
+- Each call runs in a `RuntimeCache.get`, `set`, `remove` or `clear` client span with a
+  `cache.store_id` attribute. `get` spans also set `cache.hit`. Keys stay out of span attributes and error messages.
 - The Runtime Cache swallows its own network errors and timeouts, which then read as misses
   and silently skipped writes, removes and clears. `getCache` has no option to surface them.
 

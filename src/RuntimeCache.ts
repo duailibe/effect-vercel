@@ -38,6 +38,10 @@ const sha256 = (key: string) => createHash("sha256").update(key).digest("hex")
  * headers, where non-Latin-1 characters would make the write fail. TTLs round
  * up to whole seconds, the cache's resolution.
  *
+ * Each call runs in a `RuntimeCache.<operation>` client span with the store
+ * id, and `get` records whether it hit. Keys stay out of span attributes and
+ * error messages, which a failed span exports.
+ *
  * `getCache()` hashes keys with a 32-bit hash by default, which can collide.
  * Pass a cache made with a stronger `keyHashFunction`, as `layerBacking` does.
  */
@@ -47,16 +51,26 @@ export const makeBacking = (cache: RuntimeCache): Persistence.BackingPersistence
       Effect.sync(() => {
         const prefixed = (key: string) => JSON.stringify([storeId, key])
         const tag = `effect-persistence:${sha256(storeId)}`
+        const traced = (operation: string) =>
+          Effect.withSpan(`RuntimeCache.${operation}`, {
+            kind: "client",
+            attributes: { "cache.store_id": storeId },
+          })
 
         const get = (key: string) =>
           Effect.tryPromise({
             try: () => cache.get(prefixed(key)),
             catch: (cause) =>
-              new Persistence.PersistenceError({ message: `Failed to get key ${key}`, cause }),
+              new Persistence.PersistenceError({
+                message: `Failed to get an entry in ${storeId}`,
+                cause,
+              }),
           }).pipe(
             Effect.map((value) =>
               typeof value === "object" && value !== null ? value : undefined,
             ),
+            Effect.tap((value) => Effect.annotateCurrentSpan("cache.hit", value !== undefined)),
+            traced("get"),
           )
 
         const set = (key: string, value: object, ttl: Duration.Duration | undefined) =>
@@ -68,8 +82,11 @@ export const makeBacking = (cache: RuntimeCache): Persistence.BackingPersistence
                 ...(ttl && { ttl: Math.max(1, Math.ceil(Duration.toSeconds(ttl))) }),
               }),
             catch: (cause) =>
-              new Persistence.PersistenceError({ message: `Failed to set key ${key}`, cause }),
-          })
+              new Persistence.PersistenceError({
+                message: `Failed to set an entry in ${storeId}`,
+                cause,
+              }),
+          }).pipe(traced("set"))
 
         return {
           get,
@@ -86,13 +103,16 @@ export const makeBacking = (cache: RuntimeCache): Persistence.BackingPersistence
             Effect.tryPromise({
               try: () => cache.delete(prefixed(key)),
               catch: (cause) =>
-                new Persistence.PersistenceError({ message: `Failed to remove key ${key}`, cause }),
-            }),
+                new Persistence.PersistenceError({
+                  message: `Failed to remove an entry in ${storeId}`,
+                  cause,
+                }),
+            }).pipe(traced("remove")),
           clear: Effect.tryPromise({
             try: () => cache.expireTag(tag),
             catch: (cause) =>
               new Persistence.PersistenceError({ message: `Failed to clear ${storeId}`, cause }),
-          }),
+          }).pipe(traced("clear")),
         }
       }),
   })
